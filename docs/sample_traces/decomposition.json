@@ -1,0 +1,157 @@
+{
+  "run_id": "en-879f3a",
+  "question": "Why did the bill go up 15%?",
+  "period": "2026-Q3",
+  "compare_to": "2026-Q2",
+  "answer_type": "decomposition",
+  "steps": [
+    {
+      "agent": "router",
+      "tool": "label_question",
+      "output": {
+        "intent": "bill_bridge",
+        "source": "rules"
+      },
+      "node": "parse",
+      "ms": 1.4
+    },
+    {
+      "agent": "router",
+      "tool": "resolve_periods",
+      "output": {
+        "new": "2026-Q3",
+        "ref": "2026-Q2",
+        "available": [
+          "2026-Q2",
+          "2026-Q3"
+        ]
+      },
+      "node": "periods",
+      "ms": 3.6
+    },
+    {
+      "agent": "analyst",
+      "tool": "build_baseline",
+      "output": {
+        "r2": 0.994,
+        "days_used": 91,
+        "kwh_per_unit": {
+          "A": 4.466,
+          "B": 6.494,
+          "C": 16.157
+        }
+      },
+      "node": "analyse",
+      "ms": 114.8
+    },
+    {
+      "agent": "analyst",
+      "tool": "decompose_change",
+      "output": {
+        "tariff": 8.48,
+        "volume": 1.16,
+        "product_mix": 2.96,
+        "weather": 1.46,
+        "waste": 2.01,
+        "total": 16.07
+      },
+      "node": "analyse",
+      "ms": 114.8
+    },
+    {
+      "agent": "analyst",
+      "tool": "find_idle_load",
+      "output": {
+        "flagged": [
+          {
+            "meter": "compressors",
+            "kind": "idle_growth",
+            "excess_kw": 35.0,
+            "onset": "2026-08-10"
+          },
+          {
+            "meter": "lighting",
+            "kind": "standing_idle",
+            "excess_kw": 26.0,
+            "onset": null
+          }
+        ],
+        "cleared": [
+          "furnace: idle load is in line with the reference quarter",
+          "hvac: idle load rose, but the weather explains it",
+          "lighting: idle load is in line with the reference quarter",
+          "utilities: idle load is in line with the reference quarter"
+        ]
+      },
+      "node": "analyse",
+      "ms": 114.8
+    },
+    {
+      "agent": "analyst",
+      "tool": "cross_check_waste",
+      "output": {
+        "waste_slice_kwh": 45291,
+        "waste_slice_pct_points": 2.01,
+        "meter_backed_kwh_idle_hours_only": 22395,
+        "meter_backed_kwh_if_all_hours": 44094,
+        "unexplained_kwh": 1197,
+        "meters": [
+          "compressors"
+        ],
+        "status": "supported_by_meters"
+      },
+      "node": "analyse",
+      "ms": 114.8
+    },
+    {
+      "agent": "analyst",
+      "tool": "estimate_savings",
+      "output": {
+        "actions": [
+          {
+            "action": "Find and repair compressed-air leaks on compressors",
+            "kwh": [
+              91980,
+              306600
+            ],
+            "payback_months": [
+              0.9,
+              9.3
+            ]
+          },
+          {
+            "action": "Add timers or occupancy sensors so lighting switches off outside production hours",
+            "kwh": [
+              56940,
+              102492
+            ],
+            "payback_months": [
+              6.3,
+              28.2
+            ]
+          }
+        ]
+      },
+      "node": "analyse",
+      "ms": 114.8
+    },
+    {
+      "agent": "writer",
+      "tool": "write_finance_brief",
+      "check": "all numbers match tool outputs",
+      "output": {
+        "source": "template (mock LLM)",
+        "numbers_checked": 18,
+        "attempts": 1
+      },
+      "node": "check",
+      "ms": 0.2
+    }
+  ],
+  "llm": "mock",
+  "llm_calls": 0,
+  "tokens": 0,
+  "latency_ms": 126.3,
+  "data_version": 5,
+  "summary": "The bill rose 16.07% from 2026-Q2 to 2026-Q3 (279,462 to 324,363). Causes, in percentage points: tariff (price) 8.48 points, product mix 2.96 points, weather 1.46 points, production volume 1.16 points. Together these explain 14.06 of the 16.07 points and are not machine faults. The remaining 2.01 points (range 0.67 to 3.54) are energy the baseline cannot explain, and the meters back this up: idle-hour load on compressors is 35.0 kW above its reference since 2026-08-10. The meter-backed part is controllable waste."
+}

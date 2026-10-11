@@ -1,0 +1,157 @@
+{
+  "run_id": "en-18afe4",
+  "question": "What should we do first?",
+  "period": "2026-Q3",
+  "compare_to": "2026-Q2",
+  "answer_type": "recommendation",
+  "steps": [
+    {
+      "agent": "router",
+      "tool": "label_question",
+      "output": {
+        "intent": "savings",
+        "source": "rules"
+      },
+      "node": "parse",
+      "ms": 0.1
+    },
+    {
+      "agent": "router",
+      "tool": "resolve_periods",
+      "output": {
+        "new": "2026-Q3",
+        "ref": "2026-Q2",
+        "available": [
+          "2026-Q2",
+          "2026-Q3"
+        ]
+      },
+      "node": "periods",
+      "ms": 2.9
+    },
+    {
+      "agent": "analyst",
+      "tool": "build_baseline",
+      "output": {
+        "r2": 0.994,
+        "days_used": 91,
+        "kwh_per_unit": {
+          "A": 4.466,
+          "B": 6.494,
+          "C": 16.157
+        }
+      },
+      "node": "analyse",
+      "ms": 112.9
+    },
+    {
+      "agent": "analyst",
+      "tool": "decompose_change",
+      "output": {
+        "tariff": 8.48,
+        "volume": 1.16,
+        "product_mix": 2.96,
+        "weather": 1.46,
+        "waste": 2.01,
+        "total": 16.07
+      },
+      "node": "analyse",
+      "ms": 112.9
+    },
+    {
+      "agent": "analyst",
+      "tool": "find_idle_load",
+      "output": {
+        "flagged": [
+          {
+            "meter": "compressors",
+            "kind": "idle_growth",
+            "excess_kw": 35.0,
+            "onset": "2026-08-10"
+          },
+          {
+            "meter": "lighting",
+            "kind": "standing_idle",
+            "excess_kw": 26.0,
+            "onset": null
+          }
+        ],
+        "cleared": [
+          "furnace: idle load is in line with the reference quarter",
+          "hvac: idle load rose, but the weather explains it",
+          "lighting: idle load is in line with the reference quarter",
+          "utilities: idle load is in line with the reference quarter"
+        ]
+      },
+      "node": "analyse",
+      "ms": 112.9
+    },
+    {
+      "agent": "analyst",
+      "tool": "cross_check_waste",
+      "output": {
+        "waste_slice_kwh": 45291,
+        "waste_slice_pct_points": 2.01,
+        "meter_backed_kwh_idle_hours_only": 22395,
+        "meter_backed_kwh_if_all_hours": 44094,
+        "unexplained_kwh": 1197,
+        "meters": [
+          "compressors"
+        ],
+        "status": "supported_by_meters"
+      },
+      "node": "analyse",
+      "ms": 112.9
+    },
+    {
+      "agent": "analyst",
+      "tool": "estimate_savings",
+      "output": {
+        "actions": [
+          {
+            "action": "Find and repair compressed-air leaks on compressors",
+            "kwh": [
+              91980,
+              306600
+            ],
+            "payback_months": [
+              0.9,
+              9.3
+            ]
+          },
+          {
+            "action": "Add timers or occupancy sensors so lighting switches off outside production hours",
+            "kwh": [
+              56940,
+              102492
+            ],
+            "payback_months": [
+              6.3,
+              28.2
+            ]
+          }
+        ]
+      },
+      "node": "analyse",
+      "ms": 112.9
+    },
+    {
+      "agent": "writer",
+      "tool": "write_finance_brief",
+      "check": "all numbers match tool outputs",
+      "output": {
+        "source": "template (mock LLM)",
+        "numbers_checked": 18,
+        "attempts": 1
+      },
+      "node": "check",
+      "ms": 0.1
+    }
+  ],
+  "llm": "mock",
+  "llm_calls": 0,
+  "tokens": 0,
+  "latency_ms": 119.8,
+  "data_version": 5,
+  "summary": "Recommended actions, fastest payback first. 1) Find and repair compressed-air leaks on compressors: saves 91,980 to 306,600 kWh, 10,302 to 39,490 in money and 36.8 to 122.6 t CO2e per year; payback 0.9 to 9.3 months; ease easy; confidence high. 2) Add timers or occupancy sensors so lighting switches off outside production hours: saves 56,940 to 102,492 kWh, 6,377 to 11,479 in money and 22.8 to 41 t CO2e per year; payback 6.3 to 28.2 months; ease easy; confidence low. Costs and recoverable shares are stated assumptions; each action needs a manager's approval."
+}

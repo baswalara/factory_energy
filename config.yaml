@@ -1,0 +1,94 @@
+# Every assumption the guide leaves open lives here, so a mentor's answer
+# changes one line and not the code. Each value is echoed in API answers.
+
+factory_timezone: "UTC"          # meter ts are UTC; production/weather dates are read in this zone.
+                                 # The history files carry no zone and already match local shift hours,
+                                 # so UTC here means "timestamps are local". Do not change it for that data.
+# Tariff rows come in two shapes, detected per row:
+#  - dated time blocks (a peak/off_peak row shorter than a day, e.g. 07:00-22:00): the row's own label and
+#    time span are used, so peak_hours below is ignored for it (the history tariff is like this);
+#  - long rows (a day or more) labelled peak/off_peak: peak_hours decides which local hours each price covers.
+peak_hours: {start: 6, end: 22}  # local hours [start, end) billed at the "peak" price, long-row tariffs only
+emission_factor_kg_per_kwh: 0.4  # guide sample value; replace with the data-pack value if one is given
+currency_label: ""               # e.g. "INR"; left empty because the guide names no currency
+
+submeter_tolerance_pct: 6.0      # allowed gap between sum of sub-meters and the main meter. The history data has a
+                                 # steady 5.3-5.7% unmetered load in every quarter (lighting circuits, losses); it is
+                                 # reported as "unmetered" in every answer, never rescaled away
+min_quarter_coverage: 0.8        # a quarter can be analysed when this share of its days has main-meter, production
+                                 # and weather data. Less than that = "partial": only the expected-vs-actual check runs
+min_partial_days: 7              # a partial (in-progress) quarter needs at least this many full days for that check
+
+cleaning:
+  max_interp_intervals: 4        # gaps up to 1 hour are linearly interpolated
+  max_gap_hours_for_fit: 2.0     # days with more filled main-meter hours are left out of the baseline fit
+  spike_factor: 5.0              # reading > factor x the meter's 99th percentile = meter reset
+
+# "Idle" = production-line meters are not running. Never inferred from the
+# compressors or the main meter, so a night-time leak cannot look like work.
+production_meter_prefixes: ["line"]
+productive_threshold: 0.2        # line load above this share of its normal running level = producing
+# Fallback only when the data has no production-line meters: local hours per shift pattern.
+shift_hours:
+  "off": []
+  "1-shift": [6, 14]
+  "2-shift": [6, 22]
+  "3-shift": [0, 24]
+default_shift_hours: [6, 22]
+
+baseline:
+  history_quarters: 4            # the baseline (expected energy) is learned from up to this many complete quarters
+                                 # just before the quarter being explained. Fewer are used, and said, if fewer exist
+  use_product_mix: true          # false = one rate for all units (evaluation comparison only)
+  bootstrap_samples: 200
+  bootstrap_block_days: 1        # ranges resample history days in blocks of this many days. 1 = single days: the
+                                 # history residuals show no day-to-day correlation (lag 1-7 within +/-0.13). Use 7
+                                 # (whole weeks) for data whose residuals are autocorrelated
+  seed: 7
+  max_cv_rmse_pct: 15.0          # leave-one-week-out CV(RMSE) of daily kWh above this = baseline quality warning
+  max_abs_nmbe_pct: 5.0          # |NMBE| above this = warning (limits in the spirit of ASHRAE Guideline 14)
+
+waste:
+  min_excess_pct: 15             # idle load must rise this much above its weather-adjusted reference
+  min_z: 3.0                     # ...and this many reference standard deviations
+  recent_window_days: 28         # current run-rate is measured over the last N days of the period
+
+# Action assumptions. NOT from the data pack: the guide gives no costs.
+# match = text looked for in the meter name. Costs are in the tariff's money unit.
+# max_normal_idle_ratio = idle load / working load that is normal for this kind of asset.
+actions:
+  - match: "compress"
+    growth_action: "Find and repair compressed-air leaks on {meter}"
+    standing_action: "Switch off or pressure-setback {meter} outside production hours"
+    recoverable_share: [0.6, 1.0]
+    cost: [3000, 8000]
+    ease: "easy"
+    max_normal_idle_ratio: 0.25
+  - match: "light"
+    growth_action: "Check lighting controls on {meter}: idle-hour load has risen"
+    standing_action: "Add timers or occupancy sensors so {meter} switches off outside production hours"
+    recoverable_share: [0.5, 0.9]
+    cost: [6000, 15000]
+    ease: "easy"
+    max_normal_idle_ratio: 0.3
+  - match: "hvac"
+    growth_action: "Check setpoints and schedules on {meter}: idle-hour load has risen beyond what weather explains"
+    standing_action: "Add a temperature setback schedule for {meter} outside production hours"
+    recoverable_share: [0.3, 0.7]
+    cost: [4000, 12000]
+    ease: "medium"
+    max_normal_idle_ratio: 1.0   # cooling an empty building is partly weather, so never flagged as standing waste
+  - match: "furnace"
+    growth_action: "Inspect {meter} insulation and holding setpoint: idle-hour load has risen"
+    standing_action: "Review holding temperature of {meter} during long stops"
+    recoverable_share: [0.2, 0.5]
+    cost: [10000, 30000]
+    ease: "hard"
+    max_normal_idle_ratio: 1.0   # a furnace holding temperature is normal, not waste
+default_action:
+  growth_action: "Investigate the rise in idle-hour load on {meter}"
+  standing_action: "Investigate idle-hour load on {meter}"
+  recoverable_share: [0.3, 0.8]
+  cost: [2000, 10000]
+  ease: "medium"
+  max_normal_idle_ratio: 1.0

@@ -1,0 +1,26 @@
+{
+  "comparison": "2026-Q3 vs 2026-Q2",
+  "reference_bill": 51750.637581,
+  "current_bill": 59513.233218,
+  "total_change_pct": 15.0,
+  "decomposition_percentage_points": {
+    "tariff": 1.956104,
+    "volume": 3.391413,
+    "product_mix": 2.869657,
+    "weather": 2.087023,
+    "waste": 4.695803
+  },
+  "hidden_waste": {
+    "type": "compressor idle leak",
+    "starts": "2026-07-10T00:00:00",
+    "extra_idle_kwh_per_15min": 0.786944,
+    "extra_working_kwh_per_15min": 0.196736
+  },
+  "assumptions": [
+    "All dates/timestamps treated as UTC.",
+    "Degree-day base temperature is 18 C.",
+    "Main meter is bill-authoritative.",
+    "Shift_pattern clock format is participant-defined because the guide does not specify its syntax.",
+    "ground_truth_DO_NOT_INGEST.json is evaluation-only."
+  ]
+}

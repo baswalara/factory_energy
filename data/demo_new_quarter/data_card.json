@@ -1,0 +1,25 @@
+{
+  "name": "demo-new-quarter",
+  "synthetic": true,
+  "description": "Example new quarter built by scripts/make_demo_quarter.py from 2025-Q4 shifted 52 weeks. Not real data and not a forecast.",
+  "date_range": [
+    "2026-10-01",
+    "2026-12-31"
+  ],
+  "changes": {
+    "volume_factor": 1.04,
+    "compressor_leak_kw": 60.0,
+    "leak_fixed_on": null,
+    "tariff": {
+      "flat": 0.136,
+      "off_peak": 0.121,
+      "peak": 0.198
+    }
+  },
+  "row_counts": {
+    "meter_15min": 79488,
+    "tariff": 224,
+    "production": 367,
+    "weather": 91
+  }
+}

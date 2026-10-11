@@ -1,0 +1,274 @@
+FACTORY ENERGY AGENT - HOW IT WORKS, IN SIMPLE ENGLISH
+========================================================
+
+Diagrams for everything below are in docs/architecture_and_flow.pdf (pie charts, expected-vs-actual
+chart, two flowcharts and the architecture). Rebuild that PDF any time with:
+    python scripts/make_docs_pdf.py
+
+
+1. WHAT THE PRODUCT DOES
+------------------------
+A factory's electricity bill goes up or down every quarter. A finance manager wants to know WHY,
+and an energy manager wants to know WHAT TO FIX.
+
+This system answers both. You give it:
+  - meter readings every 15 minutes (the main meter plus sub-meters such as compressors and hvac),
+  - the tariff (price per kWh, which can change during a quarter),
+  - production (units made per product family per day, shift pattern, holidays),
+  - weather (daily temperature, cooling and heating degree-days).
+
+It answers plain-English questions such as:
+  - "Why did the bill go up?"            -> the change split into 5 causes that add up exactly
+  - "Is energy above the baseline?"      -> expected energy vs actual energy, month by month
+  - "What should we do first?"           -> actions with savings ranges, CO2e and payback
+  - "How much energy is used when nothing is produced?"
+  - "What if the tariff had not changed?"
+
+The 5 causes are: tariff (price), production volume, product mix, weather, and waste (energy the
+normal drivers cannot explain). They always add up to the total change, to the hundredth of a point.
+
+
+2. THE BIG IDEA (THE WORKFLOW YOU ASKED FOR)
+--------------------------------------------
+  a) The PAST data lives in data/history: five quarters, 2025-Q3 to 2026-Q3.
+  b) The user uploads a NEW quarter (four CSV files) through the web page, the API or a script.
+  c) The CURRENT quarter (the newest complete one) is compared with the LATEST PAST quarter.
+  d) A BASELINE is learned from the 4 quarters BEFORE the current one, using linear regression.
+     The baseline answers: "Given what we produced and the weather, how much energy SHOULD we have used?"
+  e) EXPECTED energy (from the baseline) is compared with ACTUAL energy (from the main meter).
+  f) The bill change is split into the 5 causes, and any waste must be backed by a sub-meter before
+     a machine is named.
+
+Example with the shipped data:
+  Current quarter 2026-Q3 is compared with 2026-Q2.
+  The baseline learns from 2025-Q3, 2025-Q4, 2026-Q1 and 2026-Q2 (362 clean days).
+  If you upload 2026-Q4, everything moves on by one quarter: 2026-Q4 vs 2026-Q3, and the baseline
+  learns from 2025-Q4 to 2026-Q3. The current quarter is NEVER used to learn its own baseline,
+  otherwise any new waste would be learned as "normal" and hidden.
+
+
+3. THE MODELS WE USE
+--------------------
+There are two kinds of model. Only one of them is an AI language model, and it never makes a number.
+
+3.1 The baseline: linear regression (the model that makes the numbers)
+  Formula, for every day:
+      expected kWh = base load
+                   + extra kWh on a working day
+                   + (kWh per unit of P_A x units of P_A) + ... for every product family
+                   + (kWh per cooling degree-day x CDD)
+                   + (kWh per heating degree-day x HDD)
+
+  - Method: ordinary least squares (statsmodels OLS, plus numpy least squares).
+  - Trained on: the daily main-meter kWh of the 4 history quarters. Days with big gaps in the meter
+    data, days without production or weather rows, and days logged as production while the lines
+    were idle are left out.
+  - Physical rule: a rate per unit or per degree-day may not be negative. If the data says it is,
+    that rate is fixed at zero and the answer says so.
+  - Why linear: every term is one cause, so the effect of volume, mix and weather can be separated
+    and added up exactly. A black-box model (gradient boosting, neural network) predicts well but
+    cannot say how much of the change was weather and how much was product mix.
+  - How good it is on the shipped data: R-squared 0.838; out-of-sample error CV(RMSE) 12.7% per
+    day (each week is predicted by a model that never saw that week); bias NMBE 0.0%.
+  - Uncertainty: the model is refitted 200 times on resampled history days. The spread gives the
+    low-high range shown next to each number.
+
+3.2 The waste check (simple rules, no AI)
+  For each sub-meter (compressors, hvac, furnace, lighting, pumps), look at its load while the
+  production lines are stopped. Compare it with that meter's own pattern in the history quarters,
+  after adjusting for weather. If the last 28 days are more than 15% AND more than 3 standard
+  deviations above that pattern, the meter is flagged. That is the only way a machine gets named.
+  On the shipped data the compressors are flagged (idle load about 73 kW above normal since early
+  July 2026). HVAC is cleared: its rise is explained by the hottest quarter in the data.
+
+3.3 The language model (LLM): Google Gemini
+  - Provider: Google Gemini API (the key you gave is stored in the local .env file, which Git and
+    Docker ignore).
+  - Model in use: gemini-3.5-flash-lite.
+    We first tried gemini-3.8-flash (the code's default for Gemini). At the time of testing it
+    returned "high demand" errors (503) and timed out, so the backend was switched to
+    gemini-3.5-flash-lite, which answered in about 2 seconds per call.
+  - Before this, no key was used at all: the app ran with MOCK_LLM=true (keyword rules and a fixed
+    text template).
+  - What the LLM does (only two small jobs):
+      1. Label a question when the keyword rules are not sure (for example "whats eating our power
+         at night?" -> idle_waste).
+      2. Rewrite the answer draft into short, plain sentences for a manager.
+  - What the LLM NEVER does: calculate, choose numbers, call tools, or decide who is to blame.
+  - Safety net: after the LLM writes, code checks every number in the text against the computed
+    facts. One wrong number -> it is asked to rewrite once. Wrong again -> a fixed template is used.
+    If Gemini is down or slow (20 second limit), the template is used and the numbers are still right.
+  - Switch provider or model by editing .env: LLM_PROVIDER = gemini | openai | anthropic | ollama,
+    LLM_MODEL = model name, MOCK_LLM = true to run with no LLM at all.
+
+
+4. HOW THE CODE WORKS, STEP BY STEP
+-----------------------------------
+4.1 Getting data in
+  app/loader.py      Reads a CSV, checks the required columns, rejects bad rows (and counts them),
+                     collapses duplicates, and saves into the DuckDB database. A file is recognised
+                     by the start of its name (meter_15min_..., tariff_..., production_..., weather_...).
+  app/store.py       The DuckDB database file: the four tables, saved answers ("traces") and small
+                     metadata. A corrected tariff replaces old prices only for the dates it covers.
+
+4.2 Cleaning
+  app/cleaning.py    Puts every meter on one 15-minute grid. Negative readings and impossible spikes
+                     are treated as meter resets. Gaps up to 1 hour are interpolated; longer gaps are
+                     filled with the typical value for that time of day. Builds one row per day with
+                     kWh, units per product, degree-days and whether the day was really a working day
+                     (a holiday logged as a shift is caught here).
+                     It also decides which quarters are COMPLETE: at least 80% of the days must have
+                     real meter readings, production, weather AND tariff. Filled-in values never count.
+                     A quarter with some data but not enough is PARTIAL (a quarter still in progress).
+
+4.3 Prices
+  app/tools/billing.py  Gives every 15-minute reading the price in force at that moment. It
+                     understands dated tariff blocks (07:00-22:00 peak on weekdays, flat at weekends),
+                     which is how the history tariff is written. Bill = sum of kWh x price.
+
+4.4 The analysis tools (no AI in any of these files)
+  app/tools/baseline.py  The linear regression above: fit, quality check, ranges, predictions.
+  app/tools/expected.py  Expected vs actual energy for a quarter, by month, plus the biggest weekly excess.
+  app/tools/bridge.py    The bill split into 5 causes:
+                           tariff  = new energy at new prices minus new energy at the old average price
+                           volume, mix, weather = the baseline's rates x the change in units, mix, degree-days
+                           waste   = whatever is left
+                         Because the model is linear, the waste slice equals
+                         (actual - expected this quarter) - (actual - expected last quarter).
+  app/tools/waste.py     The sub-meter waste check (section 3.2).
+  app/tools/assets.py    Energy by sub-meter, and energy used while the lines are stopped.
+  app/tools/savings.py   Turns each flagged problem into an action with kWh, money, CO2e and payback
+                         ranges. Costs and recovery shares are stated assumptions in config.yaml.
+  app/validation.py      8 data checks (sub-meters vs main meter, resets, timestamps, tariff coverage,
+                         holidays, row counts, quarter completeness, baseline quality).
+
+4.5 Answering a question (app/graph.py, one LangGraph flow with 6 steps)
+  1. parse    Guard rules first: requests to invent numbers, skip the weather adjustment or blame a
+              machine are refused; forecasts and other fuels are "not in the data". Then keyword rules
+              label the question. The LLM is asked only if the rules are unsure.
+  2. periods  Picks the current quarter and the latest past quarter (or the ones the user named).
+              Says clearly if a quarter is missing or incomplete.
+  3. analyse  Runs the tools for that label and collects "facts" (the only numbers allowed).
+  4. write    The LLM rewrites the template draft into plain English (or the template is used as is).
+  5. check    Every number in the text must match a fact. Retry once, then the template.
+  6. respond  Returns JSON: answer type, summary, bridge, recommendations, assumptions, limitations,
+              and a run_id. GET /trace/{run_id} shows every step, tool, number and timing behind it.
+
+4.6 Where you use it
+  app/api.py           FastAPI: POST /analyze, POST /ingest, GET /periods, GET /validate,
+                       GET /trace/{id}, GET /health.
+  ui/streamlit_app.py  Web page: upload a new quarter, see which quarters are loaded, ask questions,
+                       see the bridge chart, expected-vs-actual charts, actions and the trace.
+  start.bat            Windows starter: makes the Python environment, loads the history the first
+                       time, starts the API and the web page, opens the browser.
+                       (Written but NOT run here: you stopped that test. Run it once and check the
+                       two windows it opens.)
+  config.yaml          Every assumption in one place: 4 history quarters, 80% completeness,
+                       6% sub-meter tolerance, emission factor 0.4 kg CO2e/kWh, action costs.
+
+
+5. A WORKED EXAMPLE (REAL OUTPUT ON THE SHIPPED DATA)
+-----------------------------------------------------
+  Bill 2026-Q2: 249,597    Bill 2026-Q3: 325,113    Change: +30.26%
+  Split (percentage points of the 2026-Q2 bill):
+      tariff (price)       8.54   prices rose on 2026-05-15 and 2026-08-01
+      weather              6.50   2026-Q3 was the hottest quarter in the data
+      production volume    5.19   more units made
+      product mix          3.96   more of the energy-heavy products P_C and P_D
+      waste                6.07   range 4.0 to 8.5, backed by the compressor meter
+      total               30.26   (the five add up exactly)
+  Expected vs actual: the baseline expected 1,784,209 kWh in 2026-Q3; the meter shows
+  1,864,705 kWh (+4.5%). In 2026-Q2 actual was 0.8% below expected.
+  Top action: repair compressed-air leaks; payback 0.4 to 4.1 months (cost is an assumption).
+
+
+6. WHAT WE CHANGED TO GET HERE
+------------------------------
+  - Baseline moved from "learn from the one previous quarter" to "learn from the 4 quarters before
+    the current one" (falls back to fewer, and says so, when less history exists).
+  - New expected-vs-actual check and question type ("Is energy above the baseline?").
+  - Tariffs written as dated time blocks are priced correctly. This also fixed a bug where the
+    "tariff unchanged" what-if repriced only off-peak hours.
+  - New quarters can be uploaded file by file. A quarter is used only once meter, production,
+    weather and tariff are all in. Partial quarters get only the expected-vs-actual check.
+  - Waste is judged against each meter's weather-adjusted pattern over the same 4 history quarters.
+  - Two new validation checks (quarter completeness and history; baseline quality).
+  - Guard fixes: "skip the weather adjustment / just blame X / write that waste is 30%" are refused;
+    an unknown meter ("the boiler") gets a question back; "write the finance brief" works.
+  - Gemini connected; the LLM now rewrites a correct draft instead of reading raw data, which
+    gave much clearer answers. Rules decide the label whenever they are sure.
+  - Tests: 56 automated tests pass. The evaluation still passes 26 of 26 cases.
+
+
+7. CURRENT PRODUCTS IN THE MARKET (GENERAL PICTURE)
+---------------------------------------------------
+Names and features change often, so check the vendors' own pages before quoting any of this.
+
+  Industrial and building energy management platforms
+    - Schneider Electric EcoStruxure (Power Monitoring Expert, Resource Advisor)
+    - Siemens (SIMATIC Energy Manager; Siemens cloud energy and sustainability tools)
+    - ABB Ability Energy Manager
+    - Rockwell Automation FactoryTalk Energy Manager
+    - Honeywell Forge, Johnson Controls OpenBlue (mainly buildings)
+    These collect meter data, show dashboards, trends, alarms and reports, and some add
+    energy-performance indicators per unit of production.
+
+  Utility bill and sustainability reporting software
+    - EnergyCAP (utility bill accounting), IBM Envizi, Microsoft Sustainability Manager
+    These focus on bills, carbon accounting and ESG reporting across many sites.
+
+  Measurement and verification (M&V) tools and standards
+    - OpenEEmeter (open source, LF Energy), which implements the CalTRACK methods for
+      weather-normalised savings
+    - RETScreen (Natural Resources Canada)
+    - Standards: IPMVP (EVO), ASHRAE Guideline 14, ISO 50001 / ISO 50006 (energy baselines and
+      performance indicators) / ISO 50015 (M&V)
+    These define how to build a baseline and prove savings, which is the same idea our baseline uses.
+
+  AI copilots
+    Several vendors now add chat assistants on top of their dashboards. In general they summarise
+    data in natural language. Publicly documented guarantees that every number in the answer
+    comes from a calculation are uncommon.
+
+
+8. RESEARCH GAPS (WHERE THIS KIND OF SYSTEM CAN STILL IMPROVE)
+--------------------------------------------------------------
+  1. Exact, explainable bill bridges. Most tools show trends. Few split a bill change into
+     price, volume, product mix, weather and waste that add up exactly and do not depend on the
+     order the causes are listed in.
+  2. Product-mix-aware baselines. Baselines usually use total production or degree-days only. A
+     shift to heavier products then looks like inefficiency. Learning a rate per product family
+     needs enough variation in the history and breaks down for brand-new products.
+  3. Honest uncertainty. Savings and waste are often shown as single numbers. Ranges that are
+     both well calibrated and narrow enough to be useful are still an open problem, especially
+     with few quarters of data.
+  4. Faults that hide in the history. If a leak starts inside the training window, the baseline
+     partly learns it as normal. If it starts in a hot quarter, weather can absorb it. Better
+     change-point detection and "non-routine event" handling (an IPMVP topic) are needed.
+  5. Causation, not correlation. Regression says what moves together, not what caused what.
+     Interaction effects (hot weather AND high volume) are ignored by a linear model.
+  6. Trustworthy LLM answers. Language models can invent or round numbers. Systems need checks
+     like ours (every number matched to a computed fact), and better ways to check meaning, not
+     only numbers.
+  7. Benchmarks with ground truth. Real factories never know the "true" split. Public test
+     datasets with a known answer for bill decomposition and waste attribution are scarce, so
+     most evaluation uses synthetic data, which is optimistic.
+  8. Sub-meter gaps and calibration. Sub-meters rarely add up to the main meter, and drift over
+     time. Robust ways to reconcile them and attribute the unmetered part are still developing.
+  9. Whole bills. Demand charges, power-factor penalties, taxes and fixed fees are not in this data,
+     and most decomposition methods ignore them.
+ 10. Small data. One factory with a year or two of history gives a fragile baseline. Transfer
+     learning across similar sites is a promising but open area.
+
+
+9. SHORT GLOSSARY
+-----------------
+  kWh            energy (kilowatt-hour)
+  pp             percentage points of last quarter's bill
+  Baseline       the expected energy from production and weather, learned from history
+  CDD / HDD      cooling / heating degree-days: how hot or cold each day was
+  CV(RMSE)       typical prediction error as a percent of the average (lower is better)
+  NMBE           average bias of the predictions (close to 0 is good)
+  Idle load      energy used while the production lines are stopped
+  Unmetered      main meter minus the sum of sub-meters
+  Trace          the saved record of every step behind one answer (GET /trace/{run_id})

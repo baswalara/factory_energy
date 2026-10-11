@@ -1,0 +1,12 @@
+{
+  "production_rows": 1829,
+  "weather_rows": 456,
+  "tariff_rows": 1111,
+  "meter_rows": 394846,
+  "meter_count": 9,
+  "q2_bill": 51750.63758056103,
+  "q3_bill": 59513.23321764517,
+  "bill_change_pct": 14.999999999999968,
+  "no_leak_bill_change_pct": 14.02479754665733,
+  "calibrated_leak_idle_kwh_per_15min": 0.7869438353083966
+}

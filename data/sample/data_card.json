@@ -1,0 +1,53 @@
+{
+  "name": "synthetic-factory",
+  "version": "1.0",
+  "seed": 42,
+  "generator": "scripts/generate_data.py",
+  "date_range": [
+    "2026-04-01",
+    "2026-09-30"
+  ],
+  "row_counts": {
+    "meter_15min": 158105,
+    "tariff": 4,
+    "production": 549,
+    "weather": 183
+  },
+  "meters": [
+    "compressors",
+    "furnace",
+    "hvac",
+    "lighting",
+    "line_1",
+    "line_2",
+    "line_3",
+    "main",
+    "utilities"
+  ],
+  "faults_planted": {
+    "missing_intervals": 47,
+    "gaps": [
+      [
+        "main",
+        "2026-04-14 09:00",
+        0.75
+      ],
+      [
+        "hvac",
+        "2026-06-03 01:00",
+        6
+      ],
+      [
+        "main",
+        "2026-07-21 10:00",
+        5
+      ]
+    ],
+    "duplicate_rows": 40,
+    "resets": [
+      "furnace 2026-05-20T10:00Z negative",
+      "line_2 2026-09-02T13:15Z spike"
+    ]
+  },
+  "privacy": "Fully synthetic. No real company or personal data."
+}

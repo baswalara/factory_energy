@@ -1,0 +1,15 @@
+fastapi==0.143.0
+uvicorn==0.53.0
+pydantic==2.13.5
+python-multipart==0.0.32
+langgraph==1.2.14
+duckdb==1.5.6
+pandas==3.0.5
+numpy==2.5.3
+statsmodels==0.15.0
+plotly==7.1.0
+streamlit==1.65.0
+httpx==0.28.1
+requests
+PyYAML==6.0.3
+pytest

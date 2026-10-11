@@ -1,0 +1,32 @@
+{
+  "name": "factory-history-5q",
+  "version": "1.0",
+  "description": "Five quarters of history (2025-Q3 to 2026-Q3) in the Annex B schema. Used as the past data: the baseline learns from the 4 quarters before the quarter being explained.",
+  "date_range": ["2025-07-01", "2026-09-30"],
+  "files": {
+    "meter_15min": "meter_15min_5q_messy.csv",
+    "tariff": "tariff_5q.csv",
+    "production": "production_5q_messy.csv",
+    "weather": "weather_5q_messy.csv"
+  },
+  "row_counts": {
+    "meter_15min": 394807,
+    "tariff": 1111,
+    "production": 1829,
+    "weather": 456
+  },
+  "meters": ["main", "compressors", "furnace", "hvac", "lighting", "line_1", "line_2", "line_3", "pumps"],
+  "products": ["P_A", "P_B", "P_C", "P_D"],
+  "known_issues": {
+    "duplicate_meter_rows": 4,
+    "meter_resets": ["line_2 -250 kWh reading"],
+    "missing_intervals_per_meter": 5,
+    "duplicate_production_rows": 3,
+    "duplicate_weather_dates": 3,
+    "missing_weather_dates": ["2025-11-07", "2026-03-19", "2026-06-02", "2026-09-11"],
+    "holiday_logged_as_shift": ["2026-08-15"],
+    "unmetered_share_pct": "5.3 to 5.7 every quarter",
+    "tariff": "dated time blocks: weekday peak 07:00-22:00, weekday off-peak otherwise, weekend flat; price changes 2026-05-15 and 2026-08-01/03",
+    "timestamps": "no zone written; they line up with local shift hours, so the factory time zone is left at UTC (naive = local)"
+  }
+}

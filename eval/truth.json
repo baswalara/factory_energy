@@ -1,0 +1,53 @@
+{
+  "seed": 42,
+  "reference": "2026-Q2",
+  "new": "2026-Q3",
+  "before_late_drop": {
+    "bill_ref": 279464.61,
+    "bill_new": 324478.2,
+    "kwh_ref": 2255528.6,
+    "kwh_new": 2427288.5,
+    "total_change_pct": 16.107,
+    "split_pct_points": {
+      "tariff": 8.492,
+      "volume": 1.153,
+      "product_mix": 2.555,
+      "weather": 1.629,
+      "waste": 1.995
+    },
+    "random_noise_pct_points": 0.283
+  },
+  "after_late_drop": {
+    "bill_ref": 279464.61,
+    "bill_new": 326940.41,
+    "kwh_ref": 2255528.6,
+    "kwh_new": 2427288.5,
+    "total_change_pct": 16.988,
+    "split_pct_points": {
+      "tariff": 9.373,
+      "volume": 1.153,
+      "product_mix": 2.555,
+      "weather": 1.629,
+      "waste": 1.995
+    },
+    "random_noise_pct_points": 0.283
+  },
+  "waste": {
+    "meter": "compressors",
+    "leak_kw": 35.0,
+    "leak_start": "2026-08-10",
+    "true_annual_saving_kwh": 245280.0,
+    "repair_effectiveness_assumed": 0.8
+  },
+  "standing_waste": {
+    "meter": "lighting",
+    "idle_kw": 50.0,
+    "on_kw": 80.0
+  },
+  "no_waste_meters": [
+    "furnace",
+    "hvac",
+    "utilities"
+  ],
+  "holiday_trap": "2026-08-26"
+}

@@ -1,0 +1,25 @@
+{
+  "run_id": "en-df521c",
+  "question": "What will the tariff be next year?",
+  "period": null,
+  "compare_to": null,
+  "answer_type": "not_in_data",
+  "steps": [
+    {
+      "agent": "router",
+      "tool": "label_question",
+      "output": {
+        "intent": "out_of_data",
+        "source": "rules"
+      },
+      "node": "parse",
+      "ms": 0.0
+    }
+  ],
+  "llm": "mock",
+  "llm_calls": 0,
+  "tokens": 0,
+  "latency_ms": 5.2,
+  "data_version": 5,
+  "summary": "This is not in the data. The loaded files hold meter readings, the tariff, production and weather for 2026-Q2, 2026-Q3. They say nothing about this, so I will not guess."
+}

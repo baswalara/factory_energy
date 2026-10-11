@@ -1,0 +1,341 @@
+{
+  "run_id": "en-879f3a",
+  "answer_type": "decomposition",
+  "summary": "The bill rose 16.07% from 2026-Q2 to 2026-Q3 (279,462 to 324,363). Causes, in percentage points: tariff (price) 8.48 points, product mix 2.96 points, weather 1.46 points, production volume 1.16 points. Together these explain 14.06 of the 16.07 points and are not machine faults. The remaining 2.01 points (range 0.67 to 3.54) are energy the baseline cannot explain, and the meters back this up: idle-hour load on compressors is 35.0 kW above its reference since 2026-08-10. The meter-backed part is controllable waste.",
+  "bridge": [
+    {
+      "cause": "tariff",
+      "pct_points": 8.48,
+      "range": [
+        7.89,
+        8.49
+      ],
+      "kwh": 0.0,
+      "money": 23726.89
+    },
+    {
+      "cause": "volume",
+      "pct_points": 1.16,
+      "range": [
+        1.12,
+        1.21
+      ],
+      "kwh": 26065.0,
+      "money": 3229.52
+    },
+    {
+      "cause": "product_mix",
+      "pct_points": 2.96,
+      "range": [
+        2.36,
+        3.55
+      ],
+      "kwh": 66674.0,
+      "money": 8261.09
+    },
+    {
+      "cause": "weather",
+      "pct_points": 1.46,
+      "range": [
+        0.21,
+        2.7
+      ],
+      "kwh": 32860.0,
+      "money": 4071.36
+    },
+    {
+      "cause": "waste",
+      "pct_points": 2.01,
+      "range": [
+        0.67,
+        3.54
+      ],
+      "kwh": 45291.0,
+      "money": 5611.71
+    }
+  ],
+  "recommendations": [
+    {
+      "action": "Find and repair compressed-air leaks on compressors",
+      "saving_kwh_per_year": [
+        91980.0,
+        306600.0
+      ],
+      "saving_money_per_year": [
+        10302.0,
+        39490.0
+      ],
+      "saving_co2e_t_per_year": [
+        36.8,
+        122.6
+      ],
+      "payback_months": [
+        0.9,
+        9.3
+      ],
+      "ease": "easy",
+      "rationale": "Idle-hour load on compressors is 64.9 kW against 30.0 kW expected from the reference quarter and weather: 35.0 kW extra since 2026-08-10.",
+      "evidence_refs": [
+        "meter_15min:compressors:2026-Q3",
+        "meter_15min:compressors:2026-Q2"
+      ],
+      "confidence": "high",
+      "estimated_impact": {
+        "kwh_per_year": [
+          91980,
+          306600
+        ],
+        "money_per_year": [
+          10302,
+          39490
+        ],
+        "co2e_t_per_year": [
+          36.8,
+          122.6
+        ]
+      },
+      "requires_approval": true,
+      "rank": 1,
+      "meter": "compressors",
+      "finding": "idle_growth",
+      "avoidable_kw": 35.0,
+      "assumed_cost": [
+        3000.0,
+        8000.0
+      ],
+      "assumed_recoverable_share": [
+        0.6,
+        1.0
+      ]
+    },
+    {
+      "action": "Add timers or occupancy sensors so lighting switches off outside production hours",
+      "saving_kwh_per_year": [
+        56940.0,
+        102492.0
+      ],
+      "saving_money_per_year": [
+        6377.0,
+        11479.0
+      ],
+      "saving_co2e_t_per_year": [
+        22.8,
+        41.0
+      ],
+      "payback_months": [
+        6.3,
+        28.2
+      ],
+      "ease": "easy",
+      "rationale": "lighting draws 62.6% of its working load while lines are stopped; up to 30.0% is assumed normal, leaving 26.0 kW avoidable. Present in both quarters, so it is not part of the bill increase.",
+      "evidence_refs": [
+        "meter_15min:lighting:2026-Q3",
+        "meter_15min:lighting:2026-Q2"
+      ],
+      "confidence": "low",
+      "estimated_impact": {
+        "kwh_per_year": [
+          56940,
+          102492
+        ],
+        "money_per_year": [
+          6377,
+          11479
+        ],
+        "co2e_t_per_year": [
+          22.8,
+          41.0
+        ]
+      },
+      "requires_approval": true,
+      "rank": 2,
+      "meter": "lighting",
+      "finding": "standing_idle",
+      "avoidable_kw": 26.0,
+      "assumed_cost": [
+        6000.0,
+        15000.0
+      ],
+      "assumed_recoverable_share": [
+        0.5,
+        0.9
+      ]
+    }
+  ],
+  "assumptions": [
+    "The main meter is the billed total; sub-meters are used for attribution only",
+    "Peak price applies 06:00-22:00 local time; the tariff file names the periods but not their hours",
+    "Factory time zone UTC is used to match UTC meter readings to daily production and weather",
+    "Idle means the production lines are not running (production-line meters ['line_1', 'line_2', 'line_3'])",
+    "Emission factor 0.4 kg CO2e per kWh (config value; the data files do not contain one)",
+    "Action costs, ease and recoverable shares are our stated assumptions in config.yaml, in the tariff's money unit; no file provides them",
+    "Yearly savings scale the pattern of the last 28 days of 2026-Q3 to a full year",
+    "Savings are priced at the tariff in force at the end of the period",
+    "Periods used: 2026-Q3 compared with 2026-Q2 (latest loaded quarter against the one before it, unless the request names them)"
+  ],
+  "limitations": [
+    "'hdd' did not vary in 2026-Q2, so its effect cannot be estimated and is set to 0",
+    "the weather rate ('cdd') is weakly determined from 2026-Q2: 95% interval -6 to 123 kWh per degree-day includes zero, so the weather and waste slices have wide ranges",
+    "2026-Q3 was much hotter than 2026-Q2: the weather rate is stretched beyond the days it was learned on",
+    "The waste slice is what the baseline cannot explain, so it also contains baseline error; see its range",
+    "Meter evidence covers idle hours only; whether the excess also runs during production is assumed in the high end of the savings range",
+    "Main-meter gaps were filled (3 intervals interpolated, 20 from the typical daily profile)"
+  ],
+  "period": "2026-Q3",
+  "compare_to": "2026-Q2",
+  "data": {
+    "period": "2026-Q3",
+    "compare_to": "2026-Q2",
+    "bill": {
+      "reference": {
+        "kwh": 2255510.13,
+        "bill": 279462.21,
+        "avg_price": 0.1239,
+        "peak_kwh_share_pct": 86.45,
+        "days": 91
+      },
+      "new": {
+        "kwh": 2426400.64,
+        "bill": 324362.78,
+        "avg_price": 0.1337,
+        "peak_kwh_share_pct": 86.3,
+        "days": 92
+      },
+      "change": 44900.57,
+      "change_pct": 16.07,
+      "kwh_change": 170891,
+      "kwh_change_pct": 7.58,
+      "avg_price_change_pct": 7.89
+    },
+    "bridge": [
+      {
+        "cause": "tariff",
+        "pct_points": 8.48,
+        "range": [
+          7.89,
+          8.49
+        ],
+        "kwh": 0,
+        "money": 23726.89
+      },
+      {
+        "cause": "volume",
+        "pct_points": 1.16,
+        "range": [
+          1.12,
+          1.21
+        ],
+        "kwh": 26065,
+        "money": 3229.52
+      },
+      {
+        "cause": "product_mix",
+        "pct_points": 2.96,
+        "range": [
+          2.36,
+          3.55
+        ],
+        "kwh": 66674,
+        "money": 8261.09
+      },
+      {
+        "cause": "weather",
+        "pct_points": 1.46,
+        "range": [
+          0.21,
+          2.7
+        ],
+        "kwh": 32860,
+        "money": 4071.36
+      },
+      {
+        "cause": "waste",
+        "pct_points": 2.01,
+        "range": [
+          0.67,
+          3.54
+        ],
+        "kwh": 45291,
+        "money": 5611.71
+      }
+    ],
+    "explained_pct_points": 14.06,
+    "baseline": {
+      "model": "linear regression on daily main-meter kWh",
+      "fitted_on": "2026-Q2",
+      "r2": 0.994,
+      "days_used": 91,
+      "days_excluded": 0,
+      "kwh_per_unit": {
+        "A": 4.466,
+        "B": 6.494,
+        "C": 16.157
+      },
+      "base_kwh_per_day": 9747,
+      "working_day_kwh": 103,
+      "kwh_per_cooling_degree_day": 58.4,
+      "kwh_per_heating_degree_day": 0.0,
+      "expected_kwh_new": 2381109,
+      "expected_kwh_reference": 2255510
+    },
+    "inputs": {
+      "units_reference": 196648,
+      "units_new": 199062,
+      "working_days_reference": 71,
+      "working_days_new": 71,
+      "cdd_reference": 546.1,
+      "cdd_new": 1108.5
+    },
+    "waste_check": {
+      "waste_slice_kwh": 45291,
+      "waste_slice_pct_points": 2.01,
+      "meter_backed_kwh_idle_hours_only": 22395,
+      "meter_backed_kwh_if_all_hours": 44094,
+      "unexplained_kwh": 1197,
+      "meters": [
+        "compressors"
+      ],
+      "status": "supported_by_meters"
+    },
+    "evidence": [
+      {
+        "meter": "compressors",
+        "idle_kw_reference": 29.9,
+        "idle_kw_new": 49.9,
+        "idle_kw_recent": 64.9,
+        "expected_idle_kw_recent": 30.0,
+        "weather_adjusted": true,
+        "evidence_refs": [
+          "meter_15min:compressors:2026-Q3",
+          "meter_15min:compressors:2026-Q2"
+        ],
+        "kind": "idle_growth",
+        "excess_kw": 35.0,
+        "threshold_kw": 4.5,
+        "onset": "2026-08-10",
+        "days_since_onset": 52,
+        "excess_idle_kwh_in_period": 22395,
+        "excess_all_hours_kwh_in_period": 44094,
+        "strength_sd": 43.9
+      }
+    ],
+    "meters_cleared": [
+      {
+        "meter": "furnace",
+        "reason": "idle load is in line with the reference quarter"
+      },
+      {
+        "meter": "hvac",
+        "reason": "idle load rose, but the weather explains it"
+      },
+      {
+        "meter": "lighting",
+        "reason": "idle load is in line with the reference quarter"
+      },
+      {
+        "meter": "utilities",
+        "reason": "idle load is in line with the reference quarter"
+      }
+    ]
+  }
+}
